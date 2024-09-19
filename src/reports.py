@@ -1,70 +1,122 @@
-import json
 import logging
 import datetime
 import pandas as pd
 from os import path
-from typing import Optional
-
+from functools import wraps
+from typing import Optional, Any
 
 path_to_xlsx_file = path.join(path.dirname(path.dirname(__file__)), 'data/operations.csv')
+path_to_logs = path.join(path.dirname(path.dirname(__file__)), 'logs/')
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+file_formater = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+file_handler = logging.FileHandler(path_to_logs + "reports.log", mode='w', encoding='utf-8')
+file_handler.setFormatter(file_formater)
+file_handler.setLevel(logging.DEBUG)
+
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
 
 
-def spending_by_category(transactions: pd.DataFrame, category: str,
-                         choice_date: Optional[str] = None) -> pd.DataFrame:
+def log_to_file(filename: str = 'recorded_file.csv') -> Any:
     """
-    :return: DataFrame с суммами транзакций по выбранным категориям
+    Принимает 'DataFrame' из функций, записывая его в 'csv' - файл
+    :return: Вывод результата принимаемой функции в консоль
     """
-    finish_date = []
-    # Обработка даты:
-    date = datetime.datetime.now() \
-        if not choice_date else datetime.datetime.strptime(choice_date, '%d %m %Y')
-    start_date = date - pd.DateOffset(months=3)
-    end_date = date
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            logger.debug('\nЗАПУСК ДЕКОРАТОРА [  log_to_file  ]')
+            df = func(*args, **kwargs)
+            try:
+                df.to_csv(path_to_logs + filename, header=True, index=True)
+                logger.debug('Создание отформатированного файла прошло успешно')
+            except Exception as err:
+                logger.error(f'\n>>> ERROR <<<\nНе удалось реализовать записать файла\n{err}\n')
+            return df
+        return wrapper
+    return decorator
 
-    transactions = transactions[transactions['Категория'] == category]  # Отфильтрованный DF по категории
-    for index, row in transactions.iterrows():
-        date_tr = row.loc[' Дата операции']      # ОБЯЗАТЕЛЬНО НУЖНО ИЗБАВИТЬСЯ ОТ ЛИШНИХ ПРОБЕЛОВ
-        sum_operations = row.loc['Сумма операции']
-        date_tr = datetime.datetime.strptime(date_tr, '%d.%m.%Y %H:%M:%S')
-        if end_date >= date_tr >= start_date:
-            finish_date.append(sum_operations)
-    df = pd.DataFrame({'Суммы операций': finish_date})
+
+@log_to_file('func_spending_by_category.csv')
+def spending_by_category(transactions: pd.DataFrame,
+                         category: str, choice_date: Optional[str] = None) -> pd.DataFrame:
+    """
+    Принимает на вход 'DataFrame' с транзакциями, название категории, опциональную дату.
+    :return: Функция возвращает 'DataFrame' с тратами по заданной категории за последние
+    три месяца (от переданной даты).
+    """
+    logger.debug('ЗАПУСК ФУНКЦИИ [  spending_by_category  ]')
+    transactions = transactions.copy()
+    transactions.columns = transactions.columns.str.strip()
+    logger.debug('Копирование входного файла и устранение пустых строк')
+
+    date = datetime.datetime.now() if not choice_date \
+        else datetime.datetime.strptime(choice_date, '%d %m %Y')
+    logger.debug('Определение даты (по умолчанию/ввод пользователем)')
+    start_date = pd.to_datetime((date - pd.DateOffset(months=3)), dayfirst=True)
+    end_date = pd.to_datetime(date, dayfirst=True)
+    logger.debug('Определение начальной и конечной точки диапазона дат')
+    transactions = transactions[transactions['Категория'] == category]
+    logger.debug('Фильтрация данных по введенной категории')
+    date_operations = pd.to_datetime(transactions['Дата операции'], dayfirst=True)
+    logger.debug('Меняем тип дат операций')
+
+    filtered_transacts = transactions[(date_operations >= start_date) &
+                                      (date_operations <= end_date)]
+    logger.debug('Фильтрация по диапазону дат')
+    filtered_transacts.loc[:, 'Сумма операции с округлением'] = [
+        float(sum_operation.replace(',', '.'))
+        for sum_operation in filtered_transacts['Сумма операции с округлением']
+    ]
+    logger.debug('Форматируем суммы операций')
+
+    df = pd.DataFrame({'Суммы операций': filtered_transacts['Сумма операции с округлением']})
     return df
 
 
-def average_weekly_expenses(transactions: pd.DataFrame,
-                            choice_date: Optional[str] = None) -> pd.DataFrame:
+@log_to_file('func_spending_by_weekday.csv')
+def spending_by_weekday(transactions: pd.DataFrame,
+                        choice_date: Optional[str] = None) -> pd.DataFrame:
     """
-    :return: DataFrame
+    Принимает на вход 'DataFrame' с транзакциями, опциональную дату.
+    :return: Функция возвращает 'DataFrame' со средними тратами в
+    каждый из дней недели за последние три месяца (от переданной даты).
     """
-    # ОБЯЗАТЕЛЬНО НУЖНО ИЗБАВИТЬСЯ ОТ ЛИШНИХ ПРОБЕЛОВ
+    logger.debug('ЗАПУСК ФУНКЦИИ [  spending_by_weekday  ]')
+    transactions = transactions.copy()
+    transactions.columns = transactions.columns.str.strip()
+    logger.debug('Копирование входного файла и устранение пустых строк')
 
-    filtered_date_transacts_list = []
-    filtered_sum_transacts_list = []
-    # Обработка опционального значения выбора даты:
     date = datetime.datetime.now() if not choice_date \
         else datetime.datetime.strptime(choice_date, '%d %m %Y')
-    start_date = date - pd.DateOffset(months=3)
-    end_date = date
+    logger.debug('Определение даты (по умолчанию/ввод пользователем)')
+    start_date = pd.to_datetime((date - pd.DateOffset(months=3)), dayfirst=True)
+    end_date = pd.to_datetime(date, dayfirst=True)
+    logger.debug('Определение начальной и конечной точки диапазона дат')
 
-    # Итерация по объекту с определением диапазона
-    for index, transact in transactions.iterrows():
-        transact_date = pd.to_datetime(transact[' Дата операции'], dayfirst=True)
-        start = pd.to_datetime(start_date, dayfirst=True).floor('s')
-        end = pd.to_datetime(end_date, dayfirst=True).floor('s')
-        if end >= transact_date >= start:
-            filtered_date_transacts_list.append(transact[' Дата операции'])
-            filtered_sum_transacts_list.append(transact['Сумма операции с округлением'])
+    transactions_datetime = pd.to_datetime(transactions['Дата операции'], dayfirst=True)
+    transactions = transactions[(transactions_datetime >= start_date) &
+                                (transactions_datetime <= end_date)]
+    logger.debug('Фильтрация по диапазону дат')
 
-    filtered_date_transacts = pd.DataFrame({'Дата операции': filtered_date_transacts_list})
-    transactions_datetime = pd.to_datetime(filtered_date_transacts['Дата операции'], dayfirst=True)
-
-    filtered_sum_transacts_list = [float(summ.replace(',', '.')) for summ in filtered_sum_transacts_list]
-    transactions['Сумма операции с округлением'] = pd.Series(filtered_sum_transacts_list)
+    transactions['Сумма операции с округлением'] = [
+        float(sum_operation.replace(',', '.'))
+        for sum_operation in transactions['Сумма операции с округлением']
+    ]
+    logger.debug('Форматируем суммы операций')
     transactions['Сумма операции с округлением'] = pd.to_numeric(
         transactions['Сумма операции с округлением'], errors='coerce'
     )
+    logger.debug('Форматируем нечисловые значения столбца в числовые или в NaN')
     transactions.dropna(subset=['Сумма операции с округлением'], inplace=True)
+    logger.debug('Удаление строк со значением NaN')
+
     transactions['День'] = transactions_datetime.dt.isocalendar().day
     transactions['Номер недели'] = transactions_datetime.dt.isocalendar().week
     transactions['Год'] = transactions_datetime.dt.isocalendar().year
@@ -72,85 +124,100 @@ def average_weekly_expenses(transactions: pd.DataFrame,
                            .agg(count_transacts=('Сумма операции с округлением', 'size'),
                                 average_amount=('Сумма операции с округлением', 'mean'))
                            .reset_index())
-    return weekly_transactions['average_amount']
+    logger.debug('Группировка определенных столбцов DF для определения среднего значения')
+    weeks = weekly_transactions['Номер недели'].tolist()
+    summ = weekly_transactions['average_amount'].tolist()
+    logger.debug('Подготовка отформатированных данных для создания DF')
+    dframe_func2 = pd.DataFrame(
+        {
+            'Номер недели': weeks,
+            'average_amount': summ
+        }
+    )
+    return dframe_func2
+
+
+@log_to_file('func_spending_by_workday.csv')
+def spending_by_workday(transactions: pd.DataFrame,
+                        choice_date: Optional[str] = None) -> pd.DataFrame:
+    """
+    Принимает на вход 'DataFrame' с транзакциями, опциональную дату.
+    :return: # Функция выводит средние траты в рабочий и
+    в выходной день за последние три месяца (от переданной даты) в 'DataFrame'.
+    """
+    logger.debug('ЗАПУСК ФУНКЦИИ [  spending_by_weekday  ]')
+    transactions.columns = transactions.columns.str.strip()
+    logger.debug('Создание копии входного файла')
+
+    date = datetime.datetime.now() if not choice_date \
+        else datetime.datetime.strptime(choice_date, '%d %m %Y')
+    logger.debug('Определение даты (по умолчанию/ввод пользователем)')
+    start_date = pd.to_datetime((date - pd.DateOffset(months=3)), dayfirst=True)
+    end_date = pd.to_datetime(date, dayfirst=True)
+    logger.debug('Определение начальной и конечной точки диапазона дат')
+    date_transactions = pd.to_datetime(transactions['Дата операции'], dayfirst=True)
+    filtered_transactions = transactions[(date_transactions >= start_date) &
+                                         (date_transactions <= end_date)].copy()
+    logger.debug('Фильтрация по диапазону дат')
+
+    filtered_transactions['Сумма операции с округлением'] = [
+        float(sum_operation.replace(',', '.'))
+        for sum_operation in filtered_transactions['Сумма операции с округлением']
+    ]
+    logger.debug('Форматируем суммы операций')
+
+    filtered_transactions['Сумма операции с округлением'] = (
+        pd.to_numeric(filtered_transactions['Сумма операции с округлением'], errors='coerce'))
+    logger.debug('Форматируем нечисловые значения столбца в числовые или в NaN')
+    filtered_transactions['Сумма операции с округлением'] = (
+        filtered_transactions['Сумма операции с округлением'].dropna())
+    logger.debug('Удаление строк со значением NaN')
+
+    filtered_transactions.loc[:, 'День недели'] = (
+        date_transactions[filtered_transactions.index].dt.day_name())
+    logger.debug('Определяем названия дней недель')
+
+    filtered_transactions['Год'] = date_transactions.dt.isocalendar().year
+    filtered_transactions['Номер недели'] = date_transactions.dt.isocalendar().week
+    filtered_transactions['День'] = date_transactions.dt.isocalendar().day
+    weekdays_and_weekends = filtered_transactions[filtered_transactions['День недели'].isin(
+        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    )]
+    average_values_weekends = (weekdays_and_weekends.groupby(
+        ['День недели', 'Год', 'Номер недели', 'День']).agg(
+        count_transacts=('Сумма операции с округлением', 'size'),
+        average_amount=('Сумма операции с округлением', 'mean')).reset_index())
+    logger.debug('Группировка определенных столбцов DF для определения среднего значения')
+    value1_for_df = average_values_weekends['День недели'].tolist()
+    value2_for_df = average_values_weekends['average_amount'].tolist()
+    dframe_func3 = pd.DataFrame(
+        {
+            'День недели': value1_for_df,
+            'Среднее траты': value2_for_df,
+        }
+    )
+    return dframe_func3
 
 
 if __name__ == '__main__':
-    file_transacts = pd.read_csv(path_to_xlsx_file)
     cycle_true = True
-    choice_category = input('Введите необходимую категорию транзакций: \n')
-    # while cycle_true:
-    # В ОБЩЕМ ЧТОБЫ ПРОВЕРИТЬ НУЖЕН ЦИКЛ
-    #     choice_category = input('Введите необходимую категорию транзакций: \n').lower()
-    #     if (choice_category == file_transacts['Категория']) is True:
-    #         cycle_true = False
-    #     else:
-    #         print('Такой категории не существует: \n')
+    choice_category = ''
+    file_transacts = pd.read_csv(path_to_xlsx_file)
+    logger.debug('Запуск цикла проверки ввода категории')
+    while cycle_true:
+        names_category = file_transacts.loc[:, 'Категория']
+        user_choice_category = input('Введите необходимую категорию транзакций: \n').strip()
+        if user_choice_category in names_category.values:
+            choice_category = user_choice_category
+            cycle_true = False
+        else:
+            logger.warning('\nТакой категории не существует\n')
 
-    # Здесь тоже можно сделать цикл и регулярное выражение
     date_choice = input('Введите дату через пробел в формате \'ДД_ММ_ГГГГ\': ')
 
-    # ФУНКЦИЯ - 1
-    # read_xlsx_func_1 = spending_by_category(file_transacts, choice_category, date_choice)
-
-    # ФУНКЦИЯ - 2
-    read_xlsx_func_2 = average_weekly_expenses(file_transacts, date_choice)
+    read_xlsx_func_1 = spending_by_category(file_transacts, choice_category, date_choice)
+    read_xlsx_func_2 = spending_by_weekday(file_transacts, date_choice)
+    read_xlsx_func_3 = spending_by_workday(file_transacts, date_choice)
+    print(read_xlsx_func_1)
     print(read_xlsx_func_2)
-
-# --- 2 ---
-# Функция Траты по дням недели:
-# ТЕГИ #json #pandas #logging #pytest #datetime
-# принимает на вход:
-# датафрейм с транзакциями,
-# опциональную дату.
-# Если дата не передана, то берется текущая дата.
-# Функция возвращает средние траты в каждый
-# из дней недели за последние три месяца (от переданной даты).
-# ИНТЕРФЕЙС:
-# def spending_by_weekday(transactions: pd.DataFrame,
-#                         date: Optional[str] = None) -> pd.DataFrame:
-
-
-# --- 3 ---
-# Функция Траты в рабочий/выходной день:
-# ТЕГИ #json #pandas #logging #pytest #datetime
-# принимает на вход:
-# датафрейм с транзакциями,
-# опциональную дату.
-# Если дата не передана, то берется текущая дата.
-# Функция выводит средние траты в рабочий и в
-# выходной день за последние три месяца (от переданной даты).
-# ИНТЕРФЕЙС:
-# def spending_by_workday(transactions: pd.DataFrame,
-#                         date: Optional[str] = None) -> pd.DataFrame:
-
-
-
-# --- 4 ---
-# Декоратор без параметра —
-# записывает данные отчета в файл с названием по умолчанию
-# (формат имени файла придумайте самостоятельно).
-# --- 5 ---
-# Декоратор с параметром —
-# принимает имя файла в качестве параметра.
-
-
-
-
-
-
-# --- 1 ---
-# Функций Траты по категории:
-# ТЕГИ #json #pandas #logging #pytest #datetime
-# принимает на вход:
-# датафрейм с транзакциями,
-# название категории,
-# опциональную дату.
-# Если дата не передана, то берется текущая дата.
-# Функция возвращает траты по заданной категории
-# за последние три месяца (от переданной даты).
-# ИНТЕРФЕЙС:
-# def spending_by_category(transactions: pd.DataFrame,
-#                          category: str,
-#                          date: Optional[str] = None) -> pd.DataFrame:
-
+    print(read_xlsx_func_3)
