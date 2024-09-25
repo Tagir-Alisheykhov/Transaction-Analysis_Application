@@ -169,6 +169,20 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "coinpaprika-sdk"
+version = "1.0.0"
+description = "Official coinpaprika API Python client"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "coinpaprika-sdk-1.0.0.tar.gz", hash = "sha256:4f161bf5c0127e1d935617522daeb62dbbbb04a3a292670667bb2bf0706988aa"},
+    {file = "coinpaprika_sdk-1.0.0-py3-none-any.whl", hash = "sha256:0b5110efb1e82535d27395a247e6f053d4c9309e5e9fdf248218db8bb634e516"},
+]
+
+[package.dependencies]
+requests = "*"
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -264,6 +278,20 @@ files = [
 toml = ["tomli"]
 
 [[package]]
+name = "everapi"
+version = "0.1.1"
+description = "Everapi Python Client"
+optional = false
+python-versions = "*"
+files = [
+    {file = "everapi-0.1.1-py3-none-any.whl", hash = "sha256:c269c1296964ea0bea4ba307efdbaf2bd1b1b4973e4360e959e91a1cd874991f"},
+    {file = "everapi-0.1.1.tar.gz", hash = "sha256:81bc2ebfe8171cfb283df86e7d32c3b14cdbf9753d41c89254c558857b70f8cf"},
+]
+
+[package.dependencies]
+requests = "*"
+
+[[package]]
 name = "flake8"
 version = "7.1.1"
 description = "the modular source code checker: pep8 pyflakes and co"
@@ -278,6 +306,20 @@ files = [
 mccabe = ">=0.7.0,<0.8.0"
 pycodestyle = ">=2.12.0,<2.13.0"
 pyflakes = ">=3.2.0,<3.3.0"
+
+[[package]]
+name = "freecurrencyapi"
+version = "0.1.0"
+description = "Freecurrencyapi Python Client"
+optional = false
+python-versions = "*"
+files = [
+    {file = "freecurrencyapi-0.1.0.tar.gz", hash = "sha256:cd28291cf6ea51cf2c3a84d71af46b64fb6a8fbee26d19a34177a67e8f6ccbe4"},
+]
+
+[package.dependencies]
+everapi = "*"
+requests = "*"
 
 [[package]]
 name = "idna"
@@ -752,4 +794,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "4e5b0d8bcb110c855cc1b14ddf7fbb7f817509b79f847000626036f6a2825dcc"
+content-hash = "c6dada412e11f31aaa1580ccc1c34d5824b904dcadf03d735d4870339a426841"

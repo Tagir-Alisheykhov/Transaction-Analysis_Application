@@ -29,7 +29,6 @@ def log_to_file(filename: str = "recorded_file.csv") -> Any:
     Принимает 'DataFrame' из функций, записывая его в 'csv' - файл
     :return: Вывод результата принимаемой функции в консоль
     """
-
     def decorator(func: Any) -> Any:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
