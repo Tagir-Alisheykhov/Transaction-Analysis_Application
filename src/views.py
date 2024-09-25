@@ -4,7 +4,8 @@ from os import path
 import datetime
 import pandas as pd
 
-from src.utils import user_greeting, cashback_and_cart_numb
+from src.utils import (user_greeting, cashback_and_cart_numb,
+                       top_five_sum_transacts, currency_conversion, data_sp500)
 
 path_to_xlsx_file = path.join(path.dirname(path.dirname(__file__)), "data/operations.csv")
 
@@ -12,15 +13,18 @@ path_to_xlsx_file = path.join(path.dirname(path.dirname(__file__)), "data/operat
 def home_page(csv: pd.DataFrame):
     csv = csv.copy()
     csv.columns = csv.columns.str.strip()
-    # Принимаем функции
     greeting = user_greeting()
     cards = cashback_and_cart_numb()
-
+    top_transacts = top_five_sum_transacts()
+    currency_rates = currency_conversion()
+    stock_prices = data_sp500()
     dict_ = {
         "greeting": greeting,
-        "cards": cards
+        "cards": cards,
+        "top_transactions": top_transacts,
+        "currency_rates": currency_rates,
+        "stock_prices": stock_prices
     }
-
     print(json.dumps(dict_, ensure_ascii=False, indent=2))
 
 

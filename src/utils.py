@@ -7,12 +7,12 @@ import datetime
 import freecurrencyapi
 import requests
 
-
+API_KEY_CURRENCY_1 = "a7121c2b37d9593d2f34219401e63e50"
 API_KEY_CURRENCY = "fca_live_IMOWBSuqWt4WwoknvjNvX4YpszDU6s5nInJsjVbT"  # Для курса валют
 API_KEY_SP500 = "0a11003114bb4f08a0b2497302068255"
 
-path_to_xlsx_file = path.join(path.dirname(path.dirname(__file__)), "data/operations.csv")
-csv_file = pd.read_csv(path_to_xlsx_file)
+path_to_data = path.join(path.dirname(path.dirname(__file__)), "data/")
+csv_file = pd.read_csv(path_to_data + "operations.csv")
 
 
 def user_greeting() -> str:
@@ -34,14 +34,8 @@ def cashback_and_cart_numb():
     :return:
     """
     file = csv_file.copy()
-
     cart_list = []
     sums_by_card = {}
-
-    # Сумма всех расходов (НУЖНО СДЕЛАТЬ ЗА ОДИН МЕСЯЦ Если дата — 20.05.2020,
-    # то данные для анализа будут в диапазоне 01.05.2020-20.05.2020)
-    # ВИДИМО НУЖНО ДОБАВИТЬ ОПЦИОНАЛЬНОЕ ЗНАЧЕНИЕ
-
     file.loc[:, "Сумма операции с округлением"] = [
         (float(sum_operation.replace(",", "."))) for sum_operation in file["Сумма операции с округлением"]
     ]
@@ -53,7 +47,6 @@ def cashback_and_cart_numb():
         total_spent = file[file["Номер карты"] ==
                            unique_cart_number]["Сумма операции с округлением"].sum()
         sums_by_card[unique_cart_number] = round(total_spent, 2)
-
     for card, total in sums_by_card.items():
         cashback = total // 100
         cart_list.append({
@@ -64,30 +57,53 @@ def cashback_and_cart_numb():
     return cart_list
 
 
-def top_five():
+def top_five_sum_transacts():
     """"""
+    formatted_top_transacts = []
     file_csv = csv_file.copy()
     file_csv.loc[:, "Сумма операции с округлением"] = [
-        (float(sum_operation.replace(",", "."))) for sum_operation in file_csv["Сумма операции с округлением"]
+        (float(sum_operation.replace(",", ".")))
+        for sum_operation in file_csv["Сумма операции с округлением"]
     ]
-    sorted_file = file_csv.sort_values(by="Сумма операции с округлением", ascending=False)
-    # print(sorted_file["Сумма операции с округлением"].head())
+    file_csv["Сумма операции с округлением"] = (
+        pd.to_numeric(file_csv["Сумма операции с округлением"], errors='coerce'))
+    top_5_transacts = file_csv.nlargest(5, "Сумма операции с округлением")
+    for idx, transact in top_5_transacts.iterrows():
+        dict_ = {
+            "date": transact["Дата платежа"],
+            "amount": transact["Сумма операции с округлением"],
+            "category": transact["Категория"],
+            "description": transact["Описание"]
+        }
+        formatted_top_transacts.append(dict_)
+    return formatted_top_transacts
 
 
 def currency_conversion():
     """
-    Запрос актуальных курсов валют.
-    - Сервис предоставляющий API: https://app.freecurrencyapi.com/dashboard
-    - Документация для запросов по адресу: https://github.com/everapihq/freecurrencyapi-python?tab=readme-ov-file
-    - Для вывода количества доступных запросов:
-        1 - poetry add freecurrencyapi - Скачиваем библиотеку, которую предоставляет сервис
-        2 - import freecurrencyapi (Импортируем библиотеку в необходимый модуль)
-        3 - client = freecurrencyapi.Client(API_KEY) - Вставляем персональный API-ключ
-        4 - print(client.status()) - Вывод данных в консоль
+    Сервис предоставляющий данные: https://currencylayer.com/
+    :return:
     """
-    url = f"https://api.freecurrencyapi.com/v1/latest?apikey={API_KEY_CURRENCY}"
-    response = requests.get(url)
-    return response.json()
+    converse_currencies = []
+    with open(path_to_data + "user_settings.json") as file:
+        js_file_with_currencies = json.load(file)
+    for currency in js_file_with_currencies["user_currencies"]:
+        # Уменьшаем количество валют до 1, т.к. мы превышаем
+        # скорость получения данных по подписке сервиса и ставим "break"
+        currency = "USD"
+        response = requests.get(f"http://api.currencylayer.com/convert?"
+                                f"access_key={API_KEY_CURRENCY_1}&"
+                                f"from={currency}&"
+                                f"to=RUB"
+                                f"&amount=1")
+        rate = response.json()["result"]
+        dict_ = {
+            "currency": currency,
+            "rate": round(rate, 2)
+        }
+        converse_currencies.append(dict_)
+        break
+    return converse_currencies
 
 
 def data_sp500():
@@ -95,28 +111,40 @@ def data_sp500():
     Сервис предоставляющий API: twelvedata.com
     https://twelvedata.com/account/manage-plan
     """
-    symbol = ""  # Здесь нужно задать необходимые акции, которые нужны пользователю и вставть переменную в ссылку/ Можно передавать их в самцу функцию по очереди
-    url = (f"https://api.twelvedata.com/time_series?apikey={API_KEY_SP500}"
-           f"&symbol=SPX&interval=1min&format=JSON")
-    response = requests.get(url)
-    print(response.status_code)
-    for _dict in response.json()["values"]:
-        for key, price in _dict.items():
-            if key == "open":
-                return price  # 5718.02979
+    stock_prices = []
+    with open(path_to_data + "user_settings.json") as file:
+        js_file_with_currencies = json.load(file)
+    for stock in js_file_with_currencies["user_stocks"]:
+        response = requests.get(f"https://api.twelvedata.com/time_series?"
+                                f"apikey={API_KEY_SP500}"
+                                f"&symbol={stock}&"
+                                f"interval=1min&"
+                                f"format=JSON")
+        price = response.json()["values"][0]["open"]
+        dict_ = {
+            "stock": stock,
+            "price": round(price, 2)
+        }
+        stock_prices.append(dict_)
+    return stock_prices
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
     # print(user_greeting()
 
-    print(cashback_and_cart_numb())
+    # print(cashback_and_cart_numb())
 
-    # print(top_five())
+    # print(top_five_sum_transacts())
 
     # print(currency_conversion())
 
     # print(data_sp500())
 
+
+    # ll = [{"A": "AAA", "B": "BBB", "C": [{"1": 11111, "2": 2222, "3": 3333, "4": 4444}, {"1": 11111, "2": 2222, "3": 3333, "4": 4444}]}]
+    #
+    # for i in ll:
+    #     print(i["C"][0]["2"])
 
 
 
