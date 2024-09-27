@@ -1,10 +1,8 @@
 import json
-
-# from src.views import home_page
+import logging
 from os import path
 import pandas as pd
 import datetime
-import freecurrencyapi
 import requests
 
 API_KEY_CURRENCY_1 = "a7121c2b37d9593d2f34219401e63e50"
@@ -15,7 +13,7 @@ path_to_data = path.join(path.dirname(path.dirname(__file__)), "data/")
 csv_file = pd.read_csv(path_to_data + "operations.csv")
 
 
-def user_greeting() -> str:
+def user_greeting(file_df: pd.DataFrame) -> str:
     """ Приветствие пользователя в зависимости от времени суток """
     date_now = datetime.datetime.now()
     date_without_second = date_now.replace(microsecond=0)
@@ -29,7 +27,7 @@ def user_greeting() -> str:
         return "Доброй ночи"
 
 
-def cashback_and_cart_numb():
+def cashback_and_cart_numb(file_df: pd.DataFrame):
     """
     :return:
     """
@@ -40,9 +38,7 @@ def cashback_and_cart_numb():
         (float(sum_operation.replace(",", "."))) for sum_operation in file["Сумма операции с округлением"]
     ]
     file.loc[:, "Номер карты"] = file.loc[:, "Номер карты"].fillna("No numb")
-
     list_unique_cart_number = file["Номер карты"].unique()
-
     for unique_cart_number in list_unique_cart_number:
         total_spent = file[file["Номер карты"] ==
                            unique_cart_number]["Сумма операции с округлением"].sum()
@@ -57,7 +53,7 @@ def cashback_and_cart_numb():
     return cart_list
 
 
-def top_five_sum_transacts():
+def top_five_sum_transacts(file_df: pd.DataFrame):
     """"""
     formatted_top_transacts = []
     file_csv = csv_file.copy()
@@ -123,7 +119,7 @@ def data_sp500():
         price = response.json()["values"][0]["open"]
         dict_ = {
             "stock": stock,
-            "price": round(price, 2)
+            "price": round(float(price), 2)
         }
         stock_prices.append(dict_)
     return stock_prices

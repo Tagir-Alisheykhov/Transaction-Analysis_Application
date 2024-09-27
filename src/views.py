@@ -1,5 +1,6 @@
 # Страница «Главная»
 import json
+import logging
 from os import path
 import datetime
 import pandas as pd
@@ -10,12 +11,17 @@ from src.utils import (user_greeting, cashback_and_cart_numb,
 path_to_xlsx_file = path.join(path.dirname(path.dirname(__file__)), "data/operations.csv")
 
 
-def home_page(csv: pd.DataFrame):
-    csv = csv.copy()
-    csv.columns = csv.columns.str.strip()
-    greeting = user_greeting()
-    cards = cashback_and_cart_numb()
-    top_transacts = top_five_sum_transacts()
+def home_page(file_csv: pd.DataFrame):
+    """
+    :param
+    file_csv: DataFrame csv-файла
+    :return:
+    """
+    file_csv = file_csv.copy()
+    file_csv.columns = file_csv.columns.str.strip()
+    greeting = user_greeting(file_csv)
+    cards = cashback_and_cart_numb(file_csv)
+    top_transacts = top_five_sum_transacts(file_csv)
     currency_rates = currency_conversion()
     stock_prices = data_sp500()
     dict_ = {
