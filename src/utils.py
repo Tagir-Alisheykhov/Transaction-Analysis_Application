@@ -10,11 +10,13 @@ API_KEY_CURRENCY = "fca_live_IMOWBSuqWt4WwoknvjNvX4YpszDU6s5nInJsjVbT"  # Для
 API_KEY_SP500 = "0a11003114bb4f08a0b2497302068255"
 
 path_to_data = path.join(path.dirname(path.dirname(__file__)), "data/")
-csv_file = pd.read_csv(path_to_data + "operations.csv")
 
 
-def user_greeting(file_df: pd.DataFrame) -> str:
-    """ Приветствие пользователя в зависимости от времени суток """
+def user_greeting() -> str:
+    """
+    Приветствие пользователя в зависимости от времени суток
+    :return:
+    """
     date_now = datetime.datetime.now()
     date_without_second = date_now.replace(microsecond=0)
     if 12 > date_without_second.hour > 6:
@@ -29,50 +31,71 @@ def user_greeting(file_df: pd.DataFrame) -> str:
 
 def cashback_and_cart_numb(file_df: pd.DataFrame):
     """
+    :param file_df:
     :return:
     """
-    file = csv_file.copy()
-    cart_list = []
-    sums_by_card = {}
-    file.loc[:, "Сумма операции с округлением"] = [
-        (float(sum_operation.replace(",", "."))) for sum_operation in file["Сумма операции с округлением"]
-    ]
-    file.loc[:, "Номер карты"] = file.loc[:, "Номер карты"].fillna("No numb")
-    list_unique_cart_number = file["Номер карты"].unique()
-    for unique_cart_number in list_unique_cart_number:
-        total_spent = file[file["Номер карты"] ==
-                           unique_cart_number]["Сумма операции с округлением"].sum()
-        sums_by_card[unique_cart_number] = round(total_spent, 2)
-    for card, total in sums_by_card.items():
-        cashback = total // 100
-        cart_list.append({
-            "last_digits": card,
-            "total_spent": total,
-            "cashback": cashback
-        })
-    return cart_list
+    file = file_df.copy()
+    check_column_1 = file.columns == "Сумма операции с округлением"
+    check_column_2 = file.columns == "Номер карты"
+    if True not in check_column_1 and True not in check_column_2:
+        raise KeyError("Нет обязательного ключа")
+    else:
+        cart_list = []
+        sums_by_card = {}
+        file.loc[:, "Сумма операции с округлением"] = [
+            (float(sum_operation.replace(",", ".")))
+            for sum_operation in file["Сумма операции с округлением"]
+        ]
+        file.loc[:, "Номер карты"] = file.loc[:, "Номер карты"].fillna("No numb")
+        list_unique_cart_number = file["Номер карты"].unique()
+        for unique_cart_number in list_unique_cart_number:
+            total_spent = file[file["Номер карты"] ==
+                               unique_cart_number]["Сумма операции с округлением"].sum()
+            sums_by_card[unique_cart_number] = round(total_spent, 2)
+        for card, total in sums_by_card.items():
+            cashback = total // 100
+            cart_list.append({
+                "last_digits": card,
+                "total_spent": total,
+                "cashback": cashback
+            })
+        return cart_list
 
 
 def top_five_sum_transacts(file_df: pd.DataFrame):
-    """"""
+    """
+    :param file_df:
+    :return:
+    """
+    file_csv = file_df.copy()
+    file_csv = file_csv.fillna("Unknown")
     formatted_top_transacts = []
-    file_csv = csv_file.copy()
-    file_csv.loc[:, "Сумма операции с округлением"] = [
-        (float(sum_operation.replace(",", ".")))
-        for sum_operation in file_csv["Сумма операции с округлением"]
-    ]
-    file_csv["Сумма операции с округлением"] = (
-        pd.to_numeric(file_csv["Сумма операции с округлением"], errors='coerce'))
-    top_5_transacts = file_csv.nlargest(5, "Сумма операции с округлением")
-    for idx, transact in top_5_transacts.iterrows():
-        dict_ = {
-            "date": transact["Дата платежа"],
-            "amount": transact["Сумма операции с округлением"],
-            "category": transact["Категория"],
-            "description": transact["Описание"]
-        }
-        formatted_top_transacts.append(dict_)
-    return formatted_top_transacts
+    check_column_1 = file_csv.columns == "Сумма операции с округлением"
+    check_column_2 = file_csv.columns == "Дата платежа"
+    check_column_3 = file_csv.columns == "Категория"
+    check_column_4 = file_csv.columns == "Описание"
+    if (True not in check_column_1
+            and True not in check_column_2
+            and True not in check_column_3
+            and True not in check_column_4):
+        raise KeyError("Нет обязательного ключа")
+    else:
+        file_csv.loc[:, "Сумма операции с округлением"] = [
+            (float(sum_operation.replace(",", ".")))
+            for sum_operation in file_csv["Сумма операции с округлением"]
+        ]
+        file_csv["Сумма операции с округлением"] = (
+            pd.to_numeric(file_csv["Сумма операции с округлением"], errors='coerce'))
+        top_5_transacts = file_csv.nlargest(5, "Сумма операции с округлением")
+        for idx, transact in top_5_transacts.iterrows():
+            dict_ = {
+                "date": transact["Дата платежа"],
+                "amount": transact["Сумма операции с округлением"],
+                "category": transact["Категория"],
+                "description": transact["Описание"]
+            }
+            formatted_top_transacts.append(dict_)
+        return formatted_top_transacts
 
 
 def currency_conversion():
@@ -85,7 +108,7 @@ def currency_conversion():
         js_file_with_currencies = json.load(file)
     for currency in js_file_with_currencies["user_currencies"]:
         # Уменьшаем количество валют до 1, т.к. мы превышаем
-        # скорость получения данных по подписке сервиса и ставим "break"
+        # скорость получения данных по подписке сервиса, а затем ставим "break"
         currency = "USD"
         response = requests.get(f"http://api.currencylayer.com/convert?"
                                 f"access_key={API_KEY_CURRENCY_1}&"
@@ -123,62 +146,3 @@ def data_sp500():
         }
         stock_prices.append(dict_)
     return stock_prices
-
-
-# if __name__ == '__main__':
-    # print(user_greeting()
-
-    # print(cashback_and_cart_numb())
-
-    # print(top_five_sum_transacts())
-
-    # print(currency_conversion())
-
-    # print(data_sp500())
-
-
-    # ll = [{"A": "AAA", "B": "BBB", "C": [{"1": 11111, "2": 2222, "3": 3333, "4": 4444}, {"1": 11111, "2": 2222, "3": 3333, "4": 4444}]}]
-    #
-    # for i in ll:
-    #     print(i["C"][0]["2"])
-
-
-
-
-# Реализуйте набор функций и главную функцию, принимающую на вход строку с датой и временем в формате
-# YYYY-MM-DD HH:MM:SS
-#  и возвращающую JSON-ответ со следующими данными:
-# 1
-# Приветствие в формате
-# "???"
-# , где
-# ???
-#  — «Доброе утро» / «Добрый день» / «Добрый вечер» / «Доброй ночи»
-# в зависимости от текущего времени.
-# 2
-# По каждой карте:
-# последние 4 цифры карты;
-# общая сумма расходов;
-# кешбэк (1 рубль на каждые 100 рублей).
-# 3
-# Топ-5 транзакций по сумме платежа.
-# Курс валют.
-# Стоимость акций из S&P500.
-
-
-# МОЙ КОММЕНТАРИЙ:
-# - Сначала реализуем первую функцию (views.py)
-# json requests API datetime logging pytest pandas
-# - Потом реализуем вывод JSON с обработанными данными (utils.py)
-# Вспомогательные функции, необходимые для работы функции страницы «Главная», используют библиотеку
-# json
-# .
-# Вспомогательные функции, необходимые для работы функции страницы «Главная», используют API.
-# Вспомогательные функции, необходимые для работы функции страницы «Главная», используют библиотеку
-# datetime
-# .
-# Вспомогательные функции, необходимые для работы функции страницы «Главная», используют библиотеку
-# logging
-# .
-# Вспомогательные функции, необходимые для работы функции страницы «Главная», используют библиотеку
-# pandas
