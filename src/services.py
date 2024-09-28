@@ -55,12 +55,3 @@ def simple_search(file_csv: pd.DataFrame, choice_word: str) -> str:
         logger.debug("Вывод данных")
         result = json.dumps(res, ensure_ascii=False, indent=2)
         return result
-
-
-if __name__ == "__main__":
-    csv_file = pd.read_csv(path_to_data + "operations.csv")
-    choice_key_word = input("Простой поиск: ")
-
-    result_simple_search = simple_search(csv_file, choice_key_word)
-    print(result_simple_search)
-    logger.debug("Конец работы функции 'result_simple_search'")

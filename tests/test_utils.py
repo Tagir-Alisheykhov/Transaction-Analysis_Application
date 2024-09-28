@@ -88,13 +88,3 @@ def test_data_sp500(mock_get: Any) -> Any:
         {"stock": "TSLA", "price": 11.11},
     ]
     mock_get.assert_called()
-
-
-
-
-
-
-
-
-
-

@@ -25,8 +25,7 @@ logger.addHandler(console_handler)
 def home_page(file_csv: pd.DataFrame) -> str:
     """
     Функция группирует отформатированные данные после
-    обращения к
-    функциям из модуля 'src/utils.py'
+    обращения к функциям из модуля 'src/utils.py'
     :param
     file_csv: DataFrame csv-файла
     :return:
@@ -58,10 +57,3 @@ def home_page(file_csv: pd.DataFrame) -> str:
     result = json.dumps(dict_, ensure_ascii=False, indent=2)
     logger.debug("Конец работы функции home_page")
     return result
-
-
-if __name__ == '__main__':
-    logger.debug("Чтение данных из csv файла")
-    csv_file = pd.read_csv(path_to_xlsx_file)
-    logger.debug("Вывод результата работы функции home_page")
-    print(home_page(csv_file))
