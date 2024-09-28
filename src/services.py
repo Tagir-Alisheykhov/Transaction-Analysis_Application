@@ -1,6 +1,7 @@
 import json
 import logging
 from os import path
+
 import pandas as pd
 
 path_to_data = path.join(path.dirname(path.dirname(__file__)), "data/")
@@ -44,8 +45,8 @@ def simple_search(file_csv: pd.DataFrame, choice_word: str) -> str:
     if True not in check_column_1 and True not in check_column_2:
         raise KeyError("Нет обязательного ключа")
     filter_by_key = file_csv[
-        (file_csv["Категория"].str.contains(choice_word, na=False, case=False)) |
-        (file_csv["Описание"].str.contains(choice_word, na=False, case=False))
+        (file_csv["Категория"].str.contains(choice_word, na=False, case=False))
+        | (file_csv["Описание"].str.contains(choice_word, na=False, case=False))
     ]
     logger.debug("Запись отфильтрованных данных в файл")
     filter_by_key.to_json(gen_filename, orient="records", indent=2)

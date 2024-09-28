@@ -1,10 +1,10 @@
 import json
 import logging
-import pandas as pd
 from os import path
 
-from src.utils import (user_greeting, cashback_and_cart_numb,
-                       top_five_sum_transacts, currency_conversion, data_sp500)
+import pandas as pd
+
+from src.utils import cashback_and_cart_numb, currency_conversion, data_sp500, top_five_sum_transacts, user_greeting
 
 path_to_data = path.join(path.dirname(path.dirname(__file__)), "data/")
 path_to_logs = path.join(path.dirname(path.dirname(__file__)), "logs/")
@@ -52,7 +52,7 @@ def home_page(file_csv: pd.DataFrame) -> str:
         "cards": cards,
         "top_transactions": top_transacts,
         "currency_rates": currency_rates,
-        "stock_prices": stock_prices
+        "stock_prices": stock_prices,
     }
     result = json.dumps(dict_, ensure_ascii=False, indent=2)
     logger.debug("Конец работы функции home_page")

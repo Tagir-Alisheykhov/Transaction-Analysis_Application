@@ -90,6 +90,7 @@ git@github.com:Tagir-Alisheykhov/Transaction-Analysis_Application.git
 - `typing-extensions`  4.12.2            Backported and Experimental Type Hints for Python 3.8+
 - `tzdata`             2024.1            Provider of IANA time zone data
 - `urllib3`            2.2.2             HTTP library with thread-safe connection pooling, file post, and more.
+- `types-requests`     2.32.0.20240914
 
 
 ## Лицензия:

@@ -1,10 +1,11 @@
-import os
+import datetime
 import json
 import logging
-import pandas as pd
-import datetime
-import requests
+import os
 from os import path
+
+import pandas as pd
+import requests
 from dotenv import load_dotenv
 
 path_to_data = path.join(path.dirname(path.dirname(__file__)), "data/")
@@ -76,8 +77,7 @@ def cashback_and_cart_numb(file_df: pd.DataFrame) -> list[dict]:
     else:
         logger.debug("Меняем формат числовых данных - сумм операций")
         file.loc[:, "Сумма операции с округлением"] = [
-            (float(sum_operation.replace(",", ".")))
-            for sum_operation in file["Сумма операции с округлением"]
+            (float(sum_operation.replace(",", "."))) for sum_operation in file["Сумма операции с округлением"]
         ]
         logger.debug("Обработка NaN значений в столбце 'Номер карты'")
         file.loc[:, "Номер карты"] = file.loc[:, "Номер карты"].fillna("No numb")
@@ -86,19 +86,14 @@ def cashback_and_cart_numb(file_df: pd.DataFrame) -> list[dict]:
         logger.debug("Запуск цикла суммирования транзакций по каждому номеру карты")
         for unique_cart_number in list_unique_cart_number:
             logger.debug(f"Итерация по номеру карты: {unique_cart_number}")
-            total_spent = file[file["Номер карты"] ==
-                               unique_cart_number]["Сумма операции с округлением"].sum()
+            total_spent = file[file["Номер карты"] == unique_cart_number]["Сумма операции с округлением"].sum()
             logger.debug("Запись номера карты и суммы транзакций в словарь")
             sums_by_card[unique_cart_number] = round(total_spent, 2)
         logger.debug("Запуск цикла форматирования данных для вывода")
         for card, total in sums_by_card.items():
             logger.debug(f"Итерация по номеру карты: {card}")
             cashback = total // 100
-            cart_list.append({
-                "last_digits": card,
-                "total_spent": total,
-                "cashback": cashback
-            })
+            cart_list.append({"last_digits": card, "total_spent": total, "cashback": cashback})
         logger.debug("Вывод результата")
         logger.debug("Конец работы функции cashback_and_cart_numb")
         return cart_list
@@ -124,21 +119,23 @@ def top_five_sum_transacts(file_df: pd.DataFrame) -> list[dict]:
     check_column_2 = file_csv.columns == "Дата платежа"
     check_column_3 = file_csv.columns == "Категория"
     check_column_4 = file_csv.columns == "Описание"
-    if (True not in check_column_1
-            and True not in check_column_2
-            and True not in check_column_3
-            and True not in check_column_4):
+    if (
+        True not in check_column_1
+        and True not in check_column_2
+        and True not in check_column_3
+        and True not in check_column_4
+    ):
         logger.error("В полученном файле DataFrame отсутствуют обязательная колонка")
         raise KeyError("Нет обязательного ключа")
     else:
         logger.debug("Меняем формат числовых данных - сумм операций")
         file_csv.loc[:, "Сумма операции с округлением"] = [
-            (float(sum_operation.replace(",", ".")))
-            for sum_operation in file_csv["Сумма операции с округлением"]
+            (float(sum_operation.replace(",", "."))) for sum_operation in file_csv["Сумма операции с округлением"]
         ]
         logger.debug("Преобразование аргументов в числовой тип")
-        file_csv["Сумма операции с округлением"] = (
-            pd.to_numeric(file_csv["Сумма операции с округлением"], errors='coerce'))
+        file_csv["Сумма операции с округлением"] = pd.to_numeric(
+            file_csv["Сумма операции с округлением"], errors="coerce"
+        )
         logger.debug("Определение топ-5 транзакций")
         top_5_transacts = file_csv.nlargest(5, "Сумма операции с округлением")
         logger.debug("Запуск цикла для группировки данных в словарь")
@@ -148,7 +145,7 @@ def top_five_sum_transacts(file_df: pd.DataFrame) -> list[dict]:
                 "date": transact["Дата платежа"],
                 "amount": transact["Сумма операции с округлением"],
                 "category": transact["Категория"],
-                "description": transact["Описание"]
+                "description": transact["Описание"],
             }
             logger.debug("Запись данных словарей список")
             formatted_top_transacts.append(dict_)
@@ -177,18 +174,17 @@ def currency_conversion() -> list[dict]:
         # количества валют до 1, т.к. мы превышаем
         # скорость получения данных по подписке сервиса.
         logger.debug(f"Обращение к API для валюты: {currency}")
-        response = requests.get(f"http://api.currencylayer.com/convert?"
-                                f"access_key={API_KEY_CURRENCY}&"
-                                f"from={currency}&"
-                                f"to=RUB"
-                                f"&amount=1")
+        response = requests.get(
+            f"http://api.currencylayer.com/convert?"
+            f"access_key={API_KEY_CURRENCY}&"
+            f"from={currency}&"
+            f"to=RUB"
+            f"&amount=1"
+        )
         logger.debug("Вывод данных в формате json")
         rate = response.json()["result"]
         logger.debug("Запись данных по валюте в словарь")
-        dict_ = {
-            "currency": currency,
-            "rate": round(rate, 2)
-        }
+        dict_ = {"currency": currency, "rate": round(rate, 2)}
         logger.debug("Передача словаря с данными в список")
         converse_currencies.append(dict_)
         break
@@ -213,18 +209,17 @@ def data_sp500() -> list[dict]:
     logger.debug("Запуск цикла для обращения к API")
     for stock in js_file_with_currencies["user_stocks"]:
         logger.debug(f"Обращение к API для акции: {stock}")
-        response = requests.get(f"https://api.twelvedata.com/time_series?"
-                                f"apikey={API_KEY_SP500}"
-                                f"&symbol={stock}&"
-                                f"interval=1min&"
-                                f"format=JSON")
+        response = requests.get(
+            f"https://api.twelvedata.com/time_series?"
+            f"apikey={API_KEY_SP500}"
+            f"&symbol={stock}&"
+            f"interval=1min&"
+            f"format=JSON"
+        )
         logger.debug("Вывод данных в формате json")
         price = response.json()["values"][0]["open"]
         logger.debug("Запись данных об акции в словарь")
-        dict_ = {
-            "stock": stock,
-            "price": round(float(price), 2)
-        }
+        dict_ = {"stock": stock, "price": round(float(price), 2)}
         logger.debug("Передача словаря с данными в список")
         stock_prices.append(dict_)
     logger.debug("Вывод результата")
