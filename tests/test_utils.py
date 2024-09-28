@@ -5,14 +5,18 @@ from os import path
 from typing import Any
 from unittest.mock import patch
 
-from src.utils import (user_greeting, cashback_and_cart_numb, top_five_sum_transacts,
-                       currency_conversion, data_sp500)
+from src.utils import (user_greeting,
+                       cashback_and_cart_numb,
+                       top_five_sum_transacts,
+                       currency_conversion,
+                       data_sp500)
 
 path_to_data = path.join(path.dirname(path.dirname(__file__)), "data/")
 
 
 @pytest.fixture
-def data_with_transacts():
+def data_with_transacts() -> pd.DataFrame:
+    """Файл с транзакциями в формате DataFrame"""
     csv_file = pd.read_csv(path_to_data + "operations.csv")
     csv_file = csv_file.copy()
     return csv_file
@@ -20,7 +24,11 @@ def data_with_transacts():
 
 def test_user_greeting():
     """Корректность работы функции"""
-    assert user_greeting() == "Доброе утро" or "Добрый день" or "Добрый вечер" or "Доброй ночи"
+    assert (user_greeting() ==
+            "Доброе утро"
+            or "Добрый день"
+            or "Добрый вечер"
+            or "Доброй ночи")
 
 
 def test_invalid_user_greeting():
@@ -70,7 +78,8 @@ def test_currency_conversion(mock_get: Any) -> Any:
 @patch("requests.get")
 def test_data_sp500(mock_get: Any) -> Any:
     """Имитация запроса данных для компаний SP&500"""
-    mock_get.return_value.json.return_value = {"values": [{"open": 11.111}, {"open": 22.222}]}
+    mock_get.return_value.json.return_value = \
+        {"values": [{"open": 11.111}, {"open": 22.222}]}
     assert data_sp500() == [
         {"stock": "AAPL", "price": 11.11},
         {"stock": "AMZN", "price": 11.11},

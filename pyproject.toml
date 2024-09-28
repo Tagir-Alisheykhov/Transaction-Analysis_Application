@@ -12,6 +12,7 @@ pandas = "^2.2.2"
 pandas-stubs = "^2.2.2.240909"
 freecurrencyapi = "^0.1.0"
 coinpaprika-sdk = "^1.0.0"
+python-dotenv = "^1.0.1"
 
 
 [tool.poetry.group.dev.dependencies]

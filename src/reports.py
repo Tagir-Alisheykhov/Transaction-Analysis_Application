@@ -35,7 +35,8 @@ def log_to_file(filename: str = "recorded_file.csv") -> Any:
             logger.debug("\nЗАПУСК ДЕКОРАТОРА [  log_to_file  ]")
             df = func(*args, **kwargs)
             try:
-                df.to_csv(path_to_logs + filename, header=True, index=True)
+                path_to_data = path.join(path.dirname(path.dirname(__file__)), "data/")
+                df.to_csv(path_to_data + filename, header=True, index=True)
                 logger.debug("Создание отформатированного файла прошло успешно")
             except Exception as err:
                 logger.error(f"\n>>> ERROR <<<\nНе удалось реализовать записать файла\n{err}\n")
